@@ -1,11 +1,14 @@
-import requests
 import json
+import os
+
+import requests
 
 
 class PyBricksClient(object):
     def __init__(self, hostname, token):
         self.hostname = "%s/api/" % hostname
-        self.__headers = {'authorization': "Bearer %s" % token, "content-type": "application/json"}
+        self.__headers = {'authorization': "Bearer %s" % token, "content-type": "application/scim+json",
+                          "accept": "application/scim+json"}
 
     def get_users(self):
         endpoint = "2.0/workspace/list"
@@ -20,6 +23,13 @@ class PyBricksClient(object):
             result.add(alias)
 
         return result
+
+    def get_users_v2(self):
+        endpoint = "2.0/preview/scim/v2/Users"
+        url = "%s%s" % (self.hostname, endpoint)
+        req = requests.get(url, headers=self.__headers)
+        objects = req.json()
+        return objects
 
     def user_exists(self, user_name):
         return user_name in self.get_users()
@@ -125,6 +135,67 @@ class PyBricksClient(object):
         endpoint = "2.0/secrets/put"
         data = json.dumps({'scope': scope, 'key': key, 'string_value': string_value})
         url = "%s%s" % (self.hostname, endpoint)
+        req = requests.post(url, headers=self.__headers, data=data)
+        objects = req.json()
+        return objects
+
+    def list_workspace(self, path, recursive=False):
+        endpoint = "2.0/workspace/list"
+        url = "%s%s" % (self.hostname, endpoint)
+        params = {'path': path}
+        req = requests.get(url, params=params, headers=self.__headers)
+        response = req.json()
+        if len(response) > 0:
+            objects = response['objects']
+            if not recursive:
+                return objects
+            else:
+                for element in objects:
+                    yield element['path']
+                    if element['object_type'] == 'DIRECTORY':
+                        yield from self.list_workspace(element['path'], recursive)
+
+    def get_workspace_status(self, path):
+        endpoint = "2.0/workspace/get-status"
+        url = "%s%s" % (self.hostname, endpoint)
+        params = {'path': path}
+        req = requests.get(url, headers=self.__headers, params=params)
+        objects = req.json()
+        return objects
+
+    def import_workspace(self, content, path, language, path_format="SOURCE", overwrite=True):
+        endpoint = "2.0/workspace/import"
+        url = "%s%s" % (self.hostname, endpoint)
+        filepath = os.path.dirname(path)
+        self.mkdirs_workspace(filepath)
+
+        data = json.dumps(
+            {'content': content, 'path': path, 'language': language, 'overwrite': overwrite, 'format': path_format})
+        req = requests.post(url, headers=self.__headers, data=data)
+
+        objects = req.json()
+        return objects
+
+    def export_workspace(self, path, path_format):
+        endpoint = "2.0/workspace/export"
+        url = "%s%s" % (self.hostname, endpoint)
+        params = {'path': path, 'format': path_format}
+        req = requests.get(url, headers=self.__headers, params=params)
+        objects = req.json()
+        return objects
+
+    def mkdirs_workspace(self, path):
+        endpoint = "2.0/workspace/mkdirs"
+        url = "%s%s" % (self.hostname, endpoint)
+        data = json.dumps({'path': path})
+        req = requests.post(url, headers=self.__headers, data=data)
+        objects = req.json()
+        return objects
+
+    def delete_workspace(self, path, recursive=False):
+        endpoint = "2.0/workspace/delete"
+        url = "%s%s" % (self.hostname, endpoint)
+        data = json.dumps({'path': path, 'recursive': recursive})
         req = requests.post(url, headers=self.__headers, data=data)
         objects = req.json()
         return objects
