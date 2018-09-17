@@ -151,7 +151,7 @@ class PyBricksClient(object):
                 return objects
             else:
                 for element in objects:
-                    yield element['path']
+                    yield element
                     if element['object_type'] == 'DIRECTORY':
                         yield from self.list_workspace(element['path'], recursive)
 
