@@ -1,0 +1,7 @@
+pybricks
+========
+
+.. toctree::
+   :maxdepth: 4
+
+   pybricks
