@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pybricks',
-    version='0.0.4',
+    version='0.0.6',
     url='https://github.com/emthomas/pybricks.git',
     author='Sebastien Thomas',
     author_email='titbabthomas@gmail.com',
